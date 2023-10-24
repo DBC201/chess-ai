@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<link rel="stylesheet" href="./public/chessboard2.min.css">
+	<script src="./public/chessboard2.min.js"></script>
+
+	<script src="./public/chess.min.js"></script>
+
+	<style>
+		.button_class {
+			width: 75px;
+			height: 30px;
+			margin: 15px;
+		}
+	</style>
+</head>
+
+<body style="text-align: center;">
+
+	<div id="myBoard" style="width: 600px; margin: 0 auto; margin-top: 75px;"></div>
+	<br>
+	<br>
+	<button class="button_class" id="start" onclick="start()">start</button>
+	<button class="button_class" id="stop" onclick="stop()">stop</button>
+	<button class="button_class" id="reset" onclick="reset()">reset</button>
+	<br>
+	<br>
+	<label for="fen">Enter fen and press reset(blank for start):</label>
+	<br>
+	<textarea id="fen" style="width: 400px; height: 100px"></textarea>
+	<script>
+		const game = new Chess();
+		const board = Chessboard2('myBoard', {
+			draggable: false,
+			position: 'start',
+			// onDragStart,
+			// onDrop,
+			// onMouseoutSquare,
+			// onMouseoverSquare,
+			// onSnapEnd
+		});
+
+		function onDrop({ source, target, piece, orientation }) {
+			console.log('Source: ' + source)
+			console.log('Target: ' + target)
+			console.log('Piece: ' + piece);
+			game.move({ from: source, to: target });
+			console.log(game.moves({ verbose: true }));
+		}
+
+		function getRandom(list) {
+			return list[Math.floor(Math.random() * list.length)];
+		}
+
+		function getRandomMove(game) {
+			return getRandom(game.moves());
+		}
+
+		class Node {
+			constructor(game) {
+				this.parent = null;
+				this.children = [];
+
+				this.game = new Chess(game.fen());
+
+				this.score = null;
+
+				this.depth = 0;
+
+				this.pieceValues = {
+					'p': 1, 'n': 3, 'b': 3.25, 'r': 5, 'q': 8, 'k': 0
+				};
+			}
+
+			addParent(parent) {
+				this.parent = parent;
+				parent.children.push(this);
+				this.depth = parent.depth + 1;
+			}
+
+			getHistory() {
+				const history = [];
+				let node = this;
+
+				while (node && node.game.history().length) {
+					history.unshift(node.game.history()[0]);
+					node = node.parent;
+				}
+
+				return history;
+			}
+
+			calculateGameScore() {
+				if (this.game.in_checkmate()) {
+					return this.game.turn === 'b' ? -Infinity : Infinity;
+				}
+
+				if (this.game.in_draw()) {
+					return 0;
+				}
+
+				const board = this.game.board();
+				let score = 0;
+
+				for (let i = 0; i < board.length; i++) {
+					for (let j = 0; j < board.length; j++) {
+						const square = board[i][j];
+
+						if (!square) {
+							continue;
+						}
+
+						if (square.color === 'w') {
+							score += this.pieceValues[square.type];
+						}
+						else if (square.color === 'b') {
+							score -= this.pieceValues[square.type];
+						}
+					}
+				}
+
+				return score;
+			}
+		}
+
+		function getBestMove(game) {
+			if (game.moves() < 8) {
+				
+			}
+			const q = [];
+			const max_depth = 2;
+
+			const root = new Node(game);
+
+			q.push(root);
+
+			while (q.length) {
+				const curr = q.shift();
+				curr.score = curr.calculateGameScore();
+
+				let node = curr;
+
+				while (node.parent) {
+					if (node.parent.game.turn() === 'b' && node.score < node.parent.score) {
+						node.parent.score = node.score;
+					}
+					
+					if (node.parent.game.turn() === 'w' && node.score > node.parent.score) {
+						node.parent.score = node.score;
+					}
+					
+					node = node.parent;
+				}
+
+
+				if (curr.depth >= max_depth || curr.game.game_over()) {
+					continue;
+				}
+
+				const moves = curr.game.moves();
+				for (let i=0; i<moves.length; i++) {
+					const node = new Node(curr.game);
+					node.game.move(moves[i]);
+					node.addParent(curr);
+					q.push(node);
+				}
+			}
+
+			root.children.sort((a, b) => a.score - b.score);
+
+			const bestScore = game.turn() === 'w' ? root.children[root.children.length - 1].score : root.children[0].score;
+
+			root.children = root.children.filter((child) => child.score === bestScore);
+			
+			return getRandom(root.children).getHistory()[0];
+		}
+
+		let stop_flag = false;
+
+		function play() {
+			if (stop_flag) {
+				return;
+			}
+
+			if (game.game_over()) {
+				stop_flag = true;
+				return;
+			}
+
+			let nextMove;
+
+			if (game.turn() == 'b') {
+				nextMove = getBestMove(game);
+			} else {
+				nextMove = getBestMove(game);
+				stop_flag = true;
+			}
+
+			game.move(nextMove);
+			board.position(game.fen());
+			setTimeout(play, 500);
+		}
+
+		function start() {
+			stop_flag = false;
+			play();
+		}
+
+		function stop() {
+			stop_flag = true;
+		}
+
+		function reset() {
+			game.reset();
+			const fen = document.getElementById('fen').value;
+			if (fen) {
+				game.load(fen);
+			}
+			board.position(game.fen());
+		}
+	</script>
+
+</body>
+
+</html>
