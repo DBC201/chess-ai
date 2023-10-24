@@ -38,6 +38,9 @@
 	<input type="number" id="black_depth" value="2" style="width: 75px; height: 30px; margin: 15px;">
 	<br>
 	<br>
+	<label for="debug">Debug mode(stop after one move and print debug info to console):</label> <br><input type="checkbox" id="debug">
+	<br>
+	<br>
 	<label for="fen">Enter fen and press reset(blank for start):</label>
 	<br>
 	<br>
@@ -155,24 +158,27 @@
 
 			while (q.length) {
 				const curr = q.shift();
-				curr.score = curr.calculateGameScore();
-
-				let node = curr;
-
-				while (node.parent) {
-					if (node.parent.game.turn() === 'b' && node.score < node.parent.score) {
-						node.parent.score = node.score;
-					}
-					
-					if (node.parent.game.turn() === 'w' && node.score > node.parent.score) {
-						node.parent.score = node.score;
-					}
-					
-					node = node.parent;
-				}
-
 
 				if (curr.depth >= max_depth || curr.game.game_over()) {
+					let node = curr;
+					node.score = node.calculateGameScore();
+
+					while (node.parent) {
+						if (node.parent.score === null) {
+							node.parent.score = node.score;
+						}
+
+						if (node.parent.game.turn() === 'b' && node.score < node.parent.score) {
+							node.parent.score = node.score;
+						}
+						
+						if (node.parent.game.turn() === 'w' && node.score > node.parent.score) {
+							node.parent.score = node.score;
+						}
+						
+						node = node.parent;
+					}
+
 					continue;
 				}
 
@@ -186,6 +192,13 @@
 			}
 
 			root.children.sort((a, b) => a.score - b.score);
+
+			if (document.getElementById('debug').checked) {
+				for (let i=0; i<root.children.length; i++) {
+					console.log(root.children[i].score, root.children[i].game.history()[0]);
+					root.children[i].children.forEach((node) => console.log('\t', node.game.history()[0], node.score));
+				}
+			}
 
 			const bestScore = game.turn() === 'w' ? root.children[root.children.length - 1].score : root.children[0].score;
 
@@ -214,6 +227,10 @@
 				nextMove = getBestMove(game, document.getElementById('black_depth').value);
 			} else {
 				nextMove = getBestMove(game, document.getElementById('white_depth').value);
+			}
+
+			if (document.getElementById('debug').checked) {
+				stop_flag = true;
 			}
 
 			game.move(nextMove);
