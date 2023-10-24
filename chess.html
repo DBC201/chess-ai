@@ -110,6 +110,20 @@
 				return history;
 			}
 
+			setScore() {
+				for (let i=0; i<this.children.length; i++) {
+					if (this.score === null) {
+						this.score = this.children[i].score;
+					}
+					else if (this.game.turn() === 'w' && this.children[i].score > this.score) {
+						this.score = this.children[i].score;
+					}
+					else if (this.game.turn() === 'b' && this.children[i].score < this.score) {
+						this.score = this.children[i].score;
+					}
+				}
+			}
+
 			calculateGameScore() {
 				if (this.game.in_checkmate()) {
 					return this.game.turn === 'b' ? -Infinity : Infinity;
@@ -151,10 +165,12 @@
 				
 			}
 			const q = [];
+			const levels = [];
 
 			const root = new Node(game);
 
 			q.push(root);
+			levels.push([root]);
 
 			while (q.length) {
 				const curr = q.shift();
@@ -162,24 +178,14 @@
 				if (curr.depth >= max_depth || curr.game.game_over()) {
 					let node = curr;
 					node.score = node.calculateGameScore();
-
-					while (node.parent) {
-						if (node.parent.score === null) {
-							node.parent.score = node.score;
-						}
-
-						if (node.parent.game.turn() === 'b' && node.score < node.parent.score) {
-							node.parent.score = node.score;
-						}
-						
-						if (node.parent.game.turn() === 'w' && node.score > node.parent.score) {
-							node.parent.score = node.score;
-						}
-						
-						node = node.parent;
-					}
-
 					continue;
+				}
+
+				if (levels.length <= curr.depth) {
+					levels.push([curr]);
+				}
+				else {
+					levels[curr.depth].push(curr);
 				}
 
 				const moves = curr.game.moves();
@@ -188,6 +194,12 @@
 					node.game.move(moves[i]);
 					node.addParent(curr);
 					q.push(node);
+				}
+			}
+
+			for (let i=levels.length-1; i>0; i--) {
+				for (let j=0; j<levels[i].length; j++) {
+					levels[i][j].setScore();
 				}
 			}
 
@@ -201,10 +213,8 @@
 			}
 
 			const bestScore = game.turn() === 'w' ? root.children[root.children.length - 1].score : root.children[0].score;
-
-			root.children = root.children.filter((child) => child.score === bestScore);
 			
-			return getRandom(root.children).getHistory()[0];
+			return getRandom(root.children.filter((child) => child.score === bestScore)).getHistory()[0];
 		}
 
 		let stop_flag = false;
