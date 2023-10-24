@@ -26,9 +26,25 @@
 	<button class="button_class" id="reset" onclick="reset()">reset</button>
 	<br>
 	<br>
+	<label for="speed">Speed:</label>
+	<input type="number" id="speed" value="500" style="width: 75px; height: 30px; margin: 15px;">
+	<br>
+	<br>
+	<label for="white_depth">White depth:</label>
+	<input type="number" id="white_depth" value="2" style="width: 75px; height: 30px; margin: 15px;">
+	<br>
+	<br>
+	<label for="black_depth">Black depth:</label>
+	<input type="number" id="black_depth" value="2" style="width: 75px; height: 30px; margin: 15px;">
+	<br>
+	<br>
 	<label for="fen">Enter fen and press reset(blank for start):</label>
 	<br>
+	<br>
 	<textarea id="fen" style="width: 400px; height: 100px"></textarea>
+	<br>
+	<br>
+	<p id="pgn"></p>
 	<script>
 		const game = new Chess();
 		const board = Chessboard2('myBoard', {
@@ -124,12 +140,14 @@
 			}
 		}
 
-		function getBestMove(game) {
+		function getBestMove(game, max_depth) {
+			if (max_depth <= 0) {
+				return getRandomMove(game);
+			}
 			if (game.moves() < 8) {
 				
 			}
 			const q = [];
-			const max_depth = 2;
 
 			const root = new Node(game);
 
@@ -185,21 +203,22 @@
 
 			if (game.game_over()) {
 				stop_flag = true;
+				console.log(game.pgn());
+				document.getElementById('pgn').innerText = game.pgn();
 				return;
 			}
 
 			let nextMove;
 
 			if (game.turn() == 'b') {
-				nextMove = getBestMove(game);
+				nextMove = getBestMove(game, document.getElementById('black_depth').value);
 			} else {
-				nextMove = getBestMove(game);
-				stop_flag = true;
+				nextMove = getBestMove(game, document.getElementById('white_depth').value);
 			}
 
 			game.move(nextMove);
 			board.position(game.fen());
-			setTimeout(play, 500);
+			setTimeout(play, document.getElementById('speed').value);
 		}
 
 		function start() {
@@ -208,6 +227,8 @@
 		}
 
 		function stop() {
+			console.log(game.pgn());
+			document.getElementById('pgn').innerText = game.pgn();
 			stop_flag = true;
 		}
 
