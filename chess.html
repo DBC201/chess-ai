@@ -126,7 +126,7 @@
 
 			calculateGameScore() {
 				if (this.game.in_checkmate()) {
-					return this.game.turn === 'b' ? -Infinity : Infinity;
+					return this.game.turn() === 'b' ? Infinity : -Infinity;
 				}
 
 				if (this.game.in_draw()) {
