@@ -26,6 +26,9 @@
 	<button class="button_class" id="reset" onclick="reset()">reset</button>
 	<br>
 	<br>
+	<button class="button_class" id="undo" onclick="undo()">Undo</button>
+	<br>
+	<br>
 	<label for="speed">Speed:</label>
 	<input type="number" id="speed" value="500" style="width: 75px; height: 30px; margin: 15px;">
 	<br>
@@ -218,6 +221,7 @@
 		}
 
 		let stop_flag = false;
+		let in_progress = false;
 
 		function play() {
 			if (stop_flag) {
@@ -226,7 +230,6 @@
 
 			if (game.game_over()) {
 				stop_flag = true;
-				console.log(game.pgn());
 				document.getElementById('pgn').innerText = game.pgn();
 				return;
 			}
@@ -250,13 +253,21 @@
 
 		function start() {
 			stop_flag = false;
+			document.getElementById("start").disabled = true;
+			document.getElementById("undo").disabled = true;
 			play();
 		}
 
 		function stop() {
-			console.log(game.pgn());
 			document.getElementById('pgn').innerText = game.pgn();
+			document.getElementById("start").disabled = false;
+			document.getElementById("undo").disabled = false;
 			stop_flag = true;
+		}
+		
+		function undo() {
+			game.undo();
+			board.position(game.fen());
 		}
 
 		function reset() {
