@@ -38,6 +38,9 @@
 	<input type="number" id="black_depth" value="2" style="width: 75px; height: 30px; margin: 15px;">
 	<br>
 	<br>
+	<label for="debug">Debug mode(stop after one move and print debug info to console):</label> <br><input type="checkbox" id="debug">
+	<br>
+	<br>
 	<label for="fen">Enter fen and press reset(blank for start):</label>
 	<br>
 	<br>
@@ -107,9 +110,23 @@
 				return history;
 			}
 
+			setScore() {
+				for (let i=0; i<this.children.length; i++) {
+					if (this.score === null) {
+						this.score = this.children[i].score;
+					}
+					else if (this.game.turn() === 'w' && this.children[i].score > this.score) {
+						this.score = this.children[i].score;
+					}
+					else if (this.game.turn() === 'b' && this.children[i].score < this.score) {
+						this.score = this.children[i].score;
+					}
+				}
+			}
+
 			calculateGameScore() {
 				if (this.game.in_checkmate()) {
-					return this.game.turn === 'b' ? -Infinity : Infinity;
+					return this.game.turn() === 'b' ? Infinity : -Infinity;
 				}
 
 				if (this.game.in_draw()) {
@@ -148,32 +165,27 @@
 				
 			}
 			const q = [];
+			const levels = [];
 
 			const root = new Node(game);
 
 			q.push(root);
+			levels.push([root]);
 
 			while (q.length) {
 				const curr = q.shift();
-				curr.score = curr.calculateGameScore();
-
-				let node = curr;
-
-				while (node.parent) {
-					if (node.parent.game.turn() === 'b' && node.score < node.parent.score) {
-						node.parent.score = node.score;
-					}
-					
-					if (node.parent.game.turn() === 'w' && node.score > node.parent.score) {
-						node.parent.score = node.score;
-					}
-					
-					node = node.parent;
-				}
-
 
 				if (curr.depth >= max_depth || curr.game.game_over()) {
+					let node = curr;
+					node.score = node.calculateGameScore();
 					continue;
+				}
+
+				if (levels.length <= curr.depth) {
+					levels.push([curr]);
+				}
+				else {
+					levels[curr.depth].push(curr);
 				}
 
 				const moves = curr.game.moves();
@@ -185,13 +197,24 @@
 				}
 			}
 
+			for (let i=levels.length-1; i>0; i--) {
+				for (let j=0; j<levels[i].length; j++) {
+					levels[i][j].setScore();
+				}
+			}
+
 			root.children.sort((a, b) => a.score - b.score);
 
-			const bestScore = game.turn() === 'w' ? root.children[root.children.length - 1].score : root.children[0].score;
+			if (document.getElementById('debug').checked) {
+				for (let i=0; i<root.children.length; i++) {
+					console.log(root.children[i].score, root.children[i].game.history()[0]);
+					root.children[i].children.forEach((node) => console.log('\t', node.game.history()[0], node.score));
+				}
+			}
 
-			root.children = root.children.filter((child) => child.score === bestScore);
+			const bestScore = game.turn() === 'w' ? root.children[root.children.length - 1].score : root.children[0].score;
 			
-			return getRandom(root.children).getHistory()[0];
+			return getRandom(root.children.filter((child) => child.score === bestScore)).getHistory()[0];
 		}
 
 		let stop_flag = false;
@@ -214,6 +237,10 @@
 				nextMove = getBestMove(game, document.getElementById('black_depth').value);
 			} else {
 				nextMove = getBestMove(game, document.getElementById('white_depth').value);
+			}
+
+			if (document.getElementById('debug').checked) {
+				stop_flag = true;
 			}
 
 			game.move(nextMove);
