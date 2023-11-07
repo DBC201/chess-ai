@@ -18,67 +18,161 @@
 	</style>
 </head>
 
-<body style="text-align: center;">
-
-	<div id="myBoard" style="width: 600px; margin: 0 auto; margin-top: 75px;"></div>
+<body style="text-align: center;"></body>
 	<br>
+	<br>
+	<br>
+	<br>
+	<div id="myBoard" style="width: 600px; margin: 0 auto;"></div>
 	<br>
 	<button class="button_class" id="start" onclick="start()">start</button>
 	<button class="button_class" id="stop" onclick="stop()">stop</button>
 	<button class="button_class" id="reset" onclick="reset()">reset</button>
 	<br>
-	<br>
 	<button class="button_class" id="undo" onclick="undo()">Undo</button>
 	<br>
+	<label for="animation_speed">Animation Speed:</label>
+	<input type="number" id="animation_speed" value="500" style="width: 75px; height: 30px; margin: 15px;">
 	<br>
-	<label for="speed">Speed:</label>
-	<input type="number" id="speed" value="500" style="width: 75px; height: 30px; margin: 15px;">
-	<br>
-	<br>
-	<label for="white_depth">White depth:</label>
-	<input type="number" id="white_depth" value="2" style="width: 75px; height: 30px; margin: 15px;">
-	<br>
-	<br>
-	<label for="black_depth">Black depth:</label>
-	<input type="number" id="black_depth" value="2" style="width: 75px; height: 30px; margin: 15px;">
+	<label for="white_player">White Player:</label>
+	<select id="white_player" onchange="white_player_change()">
+		<option value="0">Alpha Beta Pruning</option>
+		<option value="1">DFS</option>
+		<option value="2">Human</option>
+	</select>
 	<br>
 	<br>
+	<label for="black_player">Black Player:</label>
+	<select id="black_player" onchange="black_player_change()">
+		<option value="0">Alpha Beta Pruning</option>
+		<option value="1">DFS</option>
+		<option value="2">Human</option>
+	</select>
+	<br>
+	<div id="white_depth_setting">
+		<label for="white_depth">White depth:</label>
+		<input type="number" id="white_depth" value="2" style="width: 75px; height: 30px; margin: 15px;">
+	</div>
+	<div id="black_depth_setting">
+		<label for="black_depth">Black depth:</label>
+		<input type="number" id="black_depth" value="2" style="width: 75px; height: 30px; margin: 15px;">
+	</div>
+	<label for="fen">Enter fen and press reset(blank for start):</label>
+	<br>
+	<br>
+	<textarea id="fen" style="width: 400px; height: 50px"></textarea>
+	<br>
+	<br>
+	<label for="pgn">PGN:</label>
+	<p id="pgn"></p>
 	<label for="debug">Debug mode(stop after one move and print debug info to console):</label> <br><input
 		type="checkbox" id="debug">
 	<br>
 	<br>
-	<label for="fen">Enter fen and press reset(blank for start):</label>
-	<br>
-	<br>
-	<textarea id="fen" style="width: 400px; height: 100px"></textarea>
-	<br>
-	<br>
-	<p id="pgn"></p>
 	<script>
+		/*
+		0 is alpha beta pruning
+		1 is dfs
+		2 is human
+		*/
+		let white_player;
+		let black_player;
+
+		function white_player_change() {
+			const white_player_type = document.getElementById('white_player').value;
+			white_player = parseInt(white_player_type);
+			if (white_player_type === '2') {
+				document.getElementById('white_depth_setting').style.display = 'none';
+			} else {
+				document.getElementById('white_depth_setting').style.display = 'block';
+			}
+		}
+
+		function black_player_change() {
+			const black_player_type = document.getElementById('black_player').value;
+			black_player = parseInt(black_player_type);
+			if (black_player_type === '2') {
+				document.getElementById('black_depth_setting').style.display = 'none';
+			} else {
+				document.getElementById('black_depth_setting').style.display = 'block';
+			}
+		}
+
+		white_player_change();
+		black_player_change();
 
 		const game = new Chess();
 		const board = Chessboard2('myBoard', {
-			draggable: false,
+			draggable: true,
 			position: 'start',
-			// onDragStart,
-			// onDrop,
+			onDragStart,
+			onDrop,
 			// onMouseoutSquare,
 			// onMouseoverSquare,
 			// onSnapEnd
 		});
 
+		function onDragStart({orientation, piece, position, square}) {
+			const piece_color = piece[0];
+
+			if (piece_color !== game.turn()) {
+				return false;
+			}
+
+			const is_ai = (game.turn() === 'b' && black_player !== 2) || (game.turn() === 'w' && white_player !== 2);
+			if (is_ai) {
+				return false;
+			}
+		}
+
 		function onDrop({ source, target, piece, orientation }) {
-			console.log('Source: ' + source)
-			console.log('Target: ' + target)
-			console.log('Piece: ' + piece);
-			game.move({ from: source, to: target });
-			console.log(game.moves({ verbose: true }));
+			let move;
+			if (piece === "wK" && source === "e1") {
+				if (target === "g1") {
+					move = game.move("O-O");
+				}
+				else if (target === "c1") {
+					move = game.move("O-O-O");
+				}
+				else {
+					move = game.move({ from: source, to: target, promotion: 'q' });
+				}
+			}
+			else if (piece === "bK" && source === "e8") {
+				if (target === "g8") {
+					move = game.move("O-O");
+				}
+				else if (target === "c8") {
+					move = game.move("O-O-O");
+				}
+				else {
+					move = game.move({ from: source, to: target, promotion: 'q' });
+				}
+			}
+			else {
+				move = game.move({ from: source, to: target, promotion: 'q' });
+			}
+
+			if (move) {
+				board.position(game.fen());
+				play();
+			}
+			else {
+				return "snapback";
+			}
 		}
 
 		let stop_flag = false;
 		let in_progress = false;
 
 		function play() {
+			if ((game.turn() === 'b' && black_player === 2) || (game.turn() === 'w' && white_player === 2)) {
+				board.draggable = true;
+				return;
+			}
+			
+			board.draggable = false;
+
 			if (stop_flag) {
 				document.getElementById('pgn').innerText = game.pgn();
 				document.getElementById("start").disabled = false;
@@ -95,26 +189,26 @@
 			}
 
 			let nextMove;
-			let start;
+			let start_time;
 
 			if (document.getElementById('debug').checked) {
-				start = performance.now();
+				start_time = performance.now();
 			}
 
 			if (game.turn() == 'b') {
-				nextMove = getBestMove(game, document.getElementById('black_depth').value, document.getElementById('debug').checked);
+				nextMove = getBestMove(game, document.getElementById('black_depth').value, black_player, document.getElementById('debug').checked);
 			} else {
-				nextMove = getBestMove(game, document.getElementById('white_depth').value, document.getElementById('debug').checked);
+				nextMove = getBestMove(game, document.getElementById('white_depth').value, white_player, document.getElementById('debug').checked);
 			}
 
 			if (document.getElementById('debug').checked) {
-				console.log('Time taken: ', performance.now() - start);
+				console.log('Time taken: ', performance.now() - start_time);
 				stop_flag = true;
 			}
 
 			game.move(nextMove);
 			board.position(game.fen());
-			setTimeout(play, document.getElementById('speed').value);
+			setTimeout(play, document.getElementById('animation_speed').value);
 		}
 
 		function start() {

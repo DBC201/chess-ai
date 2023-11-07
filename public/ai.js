@@ -223,15 +223,25 @@ function bruteGraphSearch(root, max_depth) {
 
 let cache = null;
 
-function getBestMove(game, max_depth, debug) {
+/**
+ * 
+ * @param {*} game 
+ * @param {*} max_depth 
+ * @param {number} ai 0 is bfs, 1 is alpha beta pruning
+ * @param {*} debug 
+ * @returns 
+ */
+function getBestMove(game, max_depth, ai, debug) {
 	let root;
 
 	if (cache) {
 		root = cache;
 	}
+	else if (ai === 0) {
+		root = new NonRecursiveNode(game);
+		bruteGraphSearch(root, max_depth);
+	}
 	else {
-		// root = new NonRecursiveNode(game);
-		// root = _bruteGraphSearch(game, max_depth, -Infinity, Infinity);
 		root = new Node(game);
 		alphaBetaPruning(root, max_depth, -Infinity, Infinity);
 	}
