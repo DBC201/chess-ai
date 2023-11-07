@@ -167,11 +167,9 @@
 
 		function play() {
 			if ((game.turn() === 'b' && black_player === 2) || (game.turn() === 'w' && white_player === 2)) {
-				board.draggable = true;
+				board.orientation(game.turn() === 'b' ? 'black' : 'white');
 				return;
 			}
-			
-			board.draggable = false;
 
 			if (stop_flag) {
 				document.getElementById('pgn').innerText = game.pgn();
