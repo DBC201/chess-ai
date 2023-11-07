@@ -102,11 +102,9 @@
 			}
 
 			if (game.turn() == 'b') {
-				// nextMove = getBestMove(game, document.getElementById('black_depth').value);
-				nextMove = alphaBetaPruning(game, document.getElementById('black_depth').value, document.getElementById('debug').checked);
+				nextMove = getBestMove(game, document.getElementById('black_depth').value);
 			} else {
-				// nextMove = getBestMove(game, document.getElementById('white_depth').value);
-				nextMove = alphaBetaPruning(game, document.getElementById('white_depth').value, document.getElementById('debug').checked);
+				nextMove = getBestMove(game, document.getElementById('white_depth').value);
 			}
 
 			if (document.getElementById('debug').checked) {

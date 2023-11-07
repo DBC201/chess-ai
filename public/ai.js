@@ -34,11 +34,13 @@ class Node {
 
 	updateScore() {
 		if (this.game.in_checkmate()) {
-			return this.game.turn() === 'b' ? Infinity : -Infinity;
+			this.score = this.game.turn() === 'b' ? Infinity : -Infinity;
+			return;
 		}
 
 		if (this.game.in_draw()) {
-			return 0;
+			this.score = 0;
+			return;
 		}
 
 		this.score = 0;
@@ -130,21 +132,21 @@ function getRandomMove(game) {
 	return getRandom(game.moves());
 }
 
-function _alphaBetaPruning(node, max_depth, alpha, beta) {
-	if (node.depth >= max_depth || node.game.game_over()) {
-		return [node];
+function alphaBetaPruning(root, max_depth, alpha, beta) {
+	if (root.depth >= max_depth || root.game.game_over()) {
+		return;
 	}
 
-	if (node.game.turn() === 'w') {
+	if (root.game.turn() === 'w') {
 		let maxScore = null;
-		const moves = node.game.moves();
+		const moves = root.game.moves();
 		for (let i = 0; i < moves.length; i++) {
-			const child = new Node(node.game);
-			child.addParent(node);
+			const child = new Node(root.game);
+			child.addParent(root);
 			child.game.move(moves[i]);
-			const result = _alphaBetaPruning(child, max_depth, alpha, beta);
+			alphaBetaPruning(child, max_depth, alpha, beta);
 
-			const score = result[0].getScore();
+			const score = child.getScore();
 
 			if (maxScore === null || score > maxScore) {
 				maxScore = score;
@@ -156,36 +158,35 @@ function _alphaBetaPruning(node, max_depth, alpha, beta) {
 				break;
 			}
 		}
-		console.log(maxScore, node.children);
-		node.children = node.children.filter((child) => child.score === maxScore);
-		return node.children;
+		root.score = maxScore;
+		return root;
 	} else {
 		let minScore = null;
-		const moves = node.game.moves();
+		const moves = root.game.moves();
 		for (let i = 0; i < moves.length; i++) {
-			const child = new Node(node.game);
-			child.addParent(node);
+			const child = new Node(root.game);
+			child.addParent(root);
 			child.game.move(moves[i]);
-			const result = _alphaBetaPruning(child, max_depth, alpha, beta);
+			alphaBetaPruning(child, max_depth, alpha, beta);
 
-			const score = result[0].getScore();
+			const score = child.getScore();
 
 			if (minScore === null || score < minScore) {
 				minScore = score;
 			}
 
-			alpha = Math.min(alpha, minScore);
+			beta = Math.min(beta, minScore);
 
 			if (beta <= alpha) {
 				break;
 			}
 		}
-		node.children = node.children.filter((child) => child.score === minScore);
-		return node.children;
+		root.score = minScore;
+		return root;
 	}
 }
 
-function _bruteGraphSearch(game, max_depth) {
+function bruteGraphSearch(root, max_depth) {
 	if (max_depth <= 0) {
 		return getRandomMove(game);
 	}
@@ -194,8 +195,6 @@ function _bruteGraphSearch(game, max_depth) {
 	}
 
 	const q = [];
-
-	const root = new NonRecursiveNode(game);
 
 	q.push(root);
 
@@ -222,26 +221,19 @@ function _bruteGraphSearch(game, max_depth) {
 	return root;
 }
 
-function alphaBetaPruning(game, max_depth, debug) {
-	const result = _alphaBetaPruning(new Node(game), max_depth, -Infinity, Infinity);
-	console.log(result);
-	const history = result.getHistory();
-	if (debug) {
-		console.log(history);
-	}
-	return history[0];
-}
-
 let cache = null;
 
-function bruteGraphSearch(game, max_depth, debug) {
+function getBestMove(game, max_depth, debug) {
 	let root;
 
 	if (cache) {
 		root = cache;
 	}
 	else {
-		root = _bruteGraphSearch(game, max_depth, -Infinity, Infinity);
+		// root = new NonRecursiveNode(game);
+		// root = _bruteGraphSearch(game, max_depth, -Infinity, Infinity);
+		root = new Node(game);
+		alphaBetaPruning(root, max_depth, -Infinity, Infinity);
 	}
 
 	if (debug) {
