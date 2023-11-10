@@ -7,8 +7,6 @@
 
 	<script src="./public/chess.min.js"></script>
 
-	<script src="./public/ai.js"></script>
-
 	<style>
 		.button_class {
 			width: 75px;
@@ -21,6 +19,7 @@
 <body style="text-align: center;"></body>
 	<br>
 	<br>
+	<p id="thinking_prompt">...</p>
 	<br>
 	<br>
 	<div id="myBoard" style="width: 600px; margin: 0 auto;"></div>
@@ -70,6 +69,14 @@
 	<br>
 	<br>
 	<script>
+		function show_loading_screen() {
+			document.getElementById('thinking_prompt').innerText = 'Thinking...';
+		}
+
+		function hide_loading_screen() {
+			document.getElementById('thinking_prompt').innerText = "...";
+		}
+
 		/*
 		0 is alpha beta pruning
 		1 is dfs
@@ -111,6 +118,8 @@
 			// onMouseoverSquare,
 			// onSnapEnd
 		});
+
+		const ai_worker = new Worker('./public/ai.js');
 
 		function onDragStart({orientation, piece, position, square}) {
 			const piece_color = piece[0];
@@ -165,6 +174,19 @@
 		let stop_flag = false;
 		let in_progress = false;
 
+		ai_worker.addEventListener('message', function (e) {
+			const nextMove = e.data;
+
+			game.move(nextMove);
+			board.position(game.fen());
+			hide_loading_screen();
+			setTimeout(play, document.getElementById('animation_speed').value);
+		});
+
+		ai_worker.addEventListener('error', function (e) {
+			console.log("an error occured with the worker");
+		});
+
 		function play() {
 			if ((game.turn() === 'b' && black_player === 2) || (game.turn() === 'w' && white_player === 2)) {
 				board.orientation(game.turn() === 'b' ? 'black' : 'white');
@@ -186,27 +208,14 @@
 				return;
 			}
 
-			let nextMove;
-			let start_time;
+			show_loading_screen();
 
-			if (document.getElementById('debug').checked) {
-				start_time = performance.now();
-			}
-
-			if (game.turn() == 'b') {
-				nextMove = getBestMove(game, document.getElementById('black_depth').value, black_player, document.getElementById('debug').checked);
-			} else {
-				nextMove = getBestMove(game, document.getElementById('white_depth').value, white_player, document.getElementById('debug').checked);
-			}
-
-			if (document.getElementById('debug').checked) {
-				console.log('Time taken: ', performance.now() - start_time);
-				stop_flag = true;
-			}
-
-			game.move(nextMove);
-			board.position(game.fen());
-			setTimeout(play, document.getElementById('animation_speed').value);
+			ai_worker.postMessage({
+				fen: game.fen(),
+				max_depth: game.turn() == 'b' ? document.getElementById('black_depth').value : document.getElementById('white_depth').value,
+				ai: game.turn() == 'b' ? black_player : white_player,
+				debug: document.getElementById('debug').checked
+			});
 		}
 
 		function start() {
